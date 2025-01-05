@@ -1,0 +1,29 @@
+{
+  "name": "ternaknesia",
+  "version": "1.0.0",
+  "description": "A new Flutter project.",
+  "main": "server/index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "server": "nodemon server/server.js",
+    "predict": "python server/appflask.py",
+    "flutter": "flutter run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaedaKenji/ternaknesia.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MaedaKenji/ternaknesia/issues"
+  },
+  "homepage": "https://github.com/MaedaKenji/ternaknesia#readme",
+  "dependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

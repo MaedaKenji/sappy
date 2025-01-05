@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: agus
+      POSTGRES_DB: ternaknesia
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backup.sh:/usr/local/bin/backup.sh  # Script backup dari host
+      - ./backup:/backup                     # Direktori backup di host
+    networks:
+      - postgres_network
+    command: >
+      bash -c "
+        # Start PostgreSQL in the background
+        docker-entrypoint.sh postgres &
+
+        # Tunggu beberapa detik agar PostgreSQL siap
+        sleep 10;
+
+        # Jalankan backup pertama kali
+        ./usr/local/bin/backup.sh;
+
+        # Jalankan backup setiap 3.5 jam
+        while true; do
+          ./usr/local/bin/backup.sh;
+          sleep 12600; # Interval backup dalam detik (setiap 3.5 jam)
+        done
+      "
+
+networks:
+  postgres_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

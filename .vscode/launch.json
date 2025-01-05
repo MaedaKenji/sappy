@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "sappy",
+            "cwd": "sappy",
+            "request": "launch",
+            "type": "dart",
+            
+        },
+        {
+            "name": "sappy (profile mode)",
+            "cwd": "sappy",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile",
+            
+        },
+        {
+            "name": "sappy (release mode)",
+            "cwd": "sappy",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+        }
+    ]
+}
