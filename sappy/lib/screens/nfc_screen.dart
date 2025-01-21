@@ -419,6 +419,7 @@ class _NFCPageState extends State<NFCPage> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: null,
         flexibleSpace: Container(
           height: 70,
           decoration: const BoxDecoration(

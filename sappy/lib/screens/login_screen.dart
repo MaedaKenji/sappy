@@ -4,10 +4,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:sappy/components/dialogs.dart';
 import 'package:sappy/provider/user_role.dart';
-import 'package:sappy/screens/home_screen.dart';
 import 'package:sappy/screens/mainpage.dart';
 import 'package:http/http.dart' as http;
+import 'package:sappy/screens/register_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -31,15 +32,26 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
 
   Future<void> _login() async {
-    String email = _usernameController.text.trim();
+    // Trim input values to avoid whitespace issues
+    final String email = _usernameController.text.trim();
+    final String password = _passwordController.text.trim();
     final userRole = Provider.of<UserRole>(context, listen: false);
-    final String username = _usernameController.text;
-    final String password = _passwordController.text;
 
     setState(() {
-      isLoading = true; // Mulai loading
+      isLoading = true; // Start loading
     });
 
+    // Validate email and password
+    if (email.isEmpty || password.isEmpty) {
+      ShowResultDialog.show(context, false,
+          customMessage: 'Email and password are required');
+      setState(() {
+        isLoading = false; // Stop loading
+      });
+      return;
+    }
+
+    // Hardcoded roles for testing (remove in production)
     if (email == 'user@gmail.com') {
       userRole.login(email, 'user', 'Atha Rafifi Azmi', '081234567890',
           'Jl. Raya Kediri - Nganjuk KM 10');
@@ -57,54 +69,68 @@ class _LoginPageState extends State<LoginPage> {
       userRole.login(email, 'admin', 'Admin Ternaknesia', '081234567890', '');
     } else {
       try {
-        // Tentukan waktu timeout dalam detik
+        // Make API call to login
         final response = await http
             .post(
           Uri.parse(
-              '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/login'), // Ganti dengan URL API Anda
+              '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/login'),
           headers: {'Content-Type': 'application/json'},
-          body: json.encode({'username': username, 'password': password}),
+          body: json.encode({'username': email, 'password': password}),
         )
             .timeout(
-          const Duration(seconds: 10), // Timeout 10 detik
+          const Duration(seconds: 6), // Timeout after 6 seconds
           onTimeout: () {
             throw TimeoutException('Request timed out');
           },
         );
 
+        // Handle API response
         if (response.statusCode == 200) {
           final Map<String, dynamic> responseBody = json.decode(response.body);
 
-          userRole.login(email, responseBody['role'], responseBody['username'],
-              responseBody['phone'], responseBody['cage_location']);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email tidak terdaftar')),
+          // Validate the response data
+          if (responseBody['role'] == null ) {
+            throw Exception('Invalid response from server');  
+          }
+
+          // Assign user role and data
+          userRole.login(
+            responseBody['email'],
+            responseBody['role'],
+            responseBody['nama'],
+            responseBody['no_hp'] ?? '', // Use empty string if phone is null
+            responseBody['alamat'] ?? '', // Use empty string if cage_location is null
           );
+        } else {
+          // Handle API errors
+          final errorMessage =
+              json.decode(response.body)['error'] ?? 'Login failed';
+          ShowResultDialog.show(context, false, customMessage: errorMessage);
+          userRole.logout();
           return;
         }
       } on TimeoutException {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request timed out')),
+          const SnackBar(content: Text('Request timed out. Please try again.')),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Terjadi kesalahan: $e')),
+          SnackBar(content: Text('An error occurred: $e')),
         );
       } finally {
         setState(() {
-          isLoading = false; // Selesai loading
+          isLoading = false; // Stop loading
         });
       }
     }
 
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) {
-      return MediaQuery(
-        data: MediaQuery.of(context)
-            .copyWith(textScaler: const TextScaler.linear(1.0)),
-        child: const MainPage(),
+    // Navigate to the main page if login is successful
+    if (userRole.isLoggedIn) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainPage()),
       );
-    }));
+    }
   }
 
   String svgGoogleIcon =
@@ -206,6 +232,37 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           child: const Text(
                             'LOGIN',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => RegisterScreen()));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFC35804),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 15,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20.0),
+                            ),
+                          ),
+                          child: const Text(
+                            'REGISTER',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               color: Colors.white,

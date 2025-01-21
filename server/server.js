@@ -6,6 +6,7 @@ const axios = require("axios");
 const moment = require("moment-timezone");
 const { Pool } = require("pg");
 const path = require("path");
+const { title } = require("process");
 
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
@@ -173,6 +174,7 @@ app.get("/api/cattles-relational/predict/:cow_id", async (req, res) => {
 
 app.post("/api/cows/update-catatan/dokter", async (req, res) => {
   const { cow_id, catatan } = req.body;
+  console.log("Catatan doker api call update", req.body);
 
   // Validasi data yang diterima
   if (!cow_id || !catatan) {
@@ -197,7 +199,7 @@ app.post("/api/cows/update-catatan/dokter", async (req, res) => {
       result = await poolTernaknesiaRelational.query(
         `
         UPDATE catatan_dokter
-        SET catatan = $2,
+        SET value = $2,
             tanggal = NOW()
         WHERE cow_id = $1
         RETURNING *;
@@ -208,7 +210,7 @@ app.post("/api/cows/update-catatan/dokter", async (req, res) => {
       // Insert jika cow_id tidak ditemukan
       result = await poolTernaknesiaRelational.query(
         `
-        INSERT INTO catatan_dokter (cow_id, tanggal, catatan)
+        INSERT INTO catatan_dokter (cow_id, tanggal, value)
         VALUES ($1, NOW(), $2)
         RETURNING *;
         `,
@@ -221,7 +223,7 @@ app.post("/api/cows/update-catatan/dokter", async (req, res) => {
 
     // Kirim respons jika berhasil
     res.status(201).json({
-      message: "Catatan berhasil diperbarui atau ditambahkan",
+      message: "catatan dokter berhasil diperbarui atau ditambahkan",
       data: result.rows[0],
     });
   } catch (err) {
@@ -229,9 +231,13 @@ app.post("/api/cows/update-catatan/dokter", async (req, res) => {
     await poolTernaknesiaRelational.query("ROLLBACK");
     res
       .status(500)
-      .json({ message: "Gagal memperbarui atau menambahkan catatan" });
+      .json({
+        message: "Gagal memperbarui atau menambahkan catatan dokter",
+        error: err.message
+      });
   }
 });
+
 
 app.get("/api/cows/dokter-home", async (req, res) => {
   try {
@@ -241,17 +247,17 @@ latest_kesehatan AS (
     SELECT 
         cow_id, 
         tanggal AS kesehatan_tanggal, 
-        status_kesehatan,
+        value,
         ROW_NUMBER() OVER (PARTITION BY cow_id ORDER BY tanggal DESC) AS rn
-    FROM public.kesehatan
+    FROM public.kesehatan_status
 ),
 latest_catatan AS (
     SELECT 
         cow_id, 
         tanggal AS catatan_tanggal, 
-        catatan,
+        value,
         ROW_NUMBER() OVER (PARTITION BY cow_id ORDER BY tanggal DESC) AS rn
-    FROM public.catatan
+    FROM public.catatan_peternak
 ),
 catatan_exists AS (
     SELECT DISTINCT cow_id
@@ -262,8 +268,8 @@ SELECT
     c.gender,
     c.umur,
     c.nfc_id,
-    lc.catatan AS catatan_terakhir,
-    lk.status_kesehatan AS kesehatan_terakhir,
+    lc.value AS catatan_terakhir,
+    lk.value AS kesehatan_terakhir,
     lk.kesehatan_tanggal AS tanggal_kesehatan_terakhir,
     CASE 
         WHEN ce.cow_id IS NOT NULL THEN true
@@ -272,7 +278,7 @@ SELECT
 FROM 
     public.cows c
 JOIN 
-    latest_kesehatan lk ON c.cow_id = lk.cow_id AND lk.rn = 1 AND lk.status_kesehatan = 'sakit'
+    latest_kesehatan lk ON c.cow_id = lk.cow_id AND lk.rn = 1 AND lk.value = 'sakit'
 LEFT JOIN 
     latest_catatan lc ON c.cow_id = lc.cow_id AND lc.rn = 1
 LEFT JOIN 
@@ -297,59 +303,42 @@ ORDER BY
   }
 });
 
-app.get("/api/cows/dokter-home", async (req, res) => {
+app.get("/api/data/summary/dokter", async (req, res) => {
   try {
     const result = await poolTernaknesiaRelational.query(`
-WITH 
-latest_kesehatan AS (
+      WITH LatestStatus AS (
     SELECT 
         cow_id, 
-        tanggal AS kesehatan_tanggal, 
-        status_kesehatan,
-        ROW_NUMBER() OVER (PARTITION BY cow_id ORDER BY tanggal DESC) AS rn
-    FROM public.kesehatan
-),
-latest_catatan AS (
-    SELECT 
-        cow_id, 
-        tanggal AS catatan_tanggal, 
-        catatan,
-        ROW_NUMBER() OVER (PARTITION BY cow_id ORDER BY tanggal DESC) AS rn
-    FROM public.catatan
+        value, 
+        tanggal
+    FROM kesehatan_status
+    WHERE (cow_id, tanggal) IN (
+        SELECT 
+            cow_id, 
+            MAX(tanggal) AS latest_date
+        FROM kesehatan_status
+        GROUP BY cow_id
+    )
 )
 SELECT 
-    c.cow_id,
-    c.gender,
-    c.umur,
-    c.nfc_id,
-    lc.catatan AS catatan_terakhir,
-    lk.status_kesehatan AS kesehatan_terakhir,
-    lk.kesehatan_tanggal AS tanggal_kesehatan_terakhir
-FROM 
-    public.cows c
-JOIN 
-    latest_kesehatan lk ON c.cow_id = lk.cow_id AND lk.rn = 1 AND lk.status_kesehatan = 'sakit'
-LEFT JOIN 
-    latest_catatan lc ON c.cow_id = lc.cow_id AND lc.rn = 1
-ORDER BY 
-    c.cow_id ASC;
-`);
+    value,
+    COUNT(*) AS total
+FROM LatestStatus
+GROUP BY value;
+    `);
 
-    // Format the result
-    const formattedResponse = result.rows.map((row) => ({
-      id: row.cow_id.toString(), // Format ID to 3 digits with leading zeros
-      gender: row.gender, // Capitalize first letter
-      info: row.catatan_terakhir || "Tidak ada catatan", // Default if no notes available
-      checked: false, // Default value as per example
-      isConnectedToNFCTag: row.nfc_id !== null, // Determine connection to NFC tag
-      age: row.umur.toString(), // Convert age in months to years
-    }));
+    res.json(
+      result.rows.map((row) => ({
+        status_kesehatan: row.value.toLowerCase(),
+        total: row.total,
 
-    res.json(formattedResponse);
+      }))
+    );
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 app.post("/api/cows/update-nfc", async (req, res) => {
   const { cow_id, nfc_id } = req.body;
@@ -829,34 +818,7 @@ app.post("/api/cows/tambahsapi", async (req, res) => {
   }
 });
 
-app.get("/api/data/summary/dokter", async (req, res) => {
-  try {
-    const result = await poolTernaknesiaRelational.query(`
-      WITH LatestStatus AS (
-    SELECT 
-        cow_id, 
-        status_kesehatan, 
-        tanggal
-    FROM kesehatan
-    WHERE (cow_id, tanggal) IN (
-        SELECT 
-            cow_id, 
-            MAX(tanggal) AS latest_date
-        FROM kesehatan
-        GROUP BY cow_id
-    )
-)
-SELECT 
-    status_kesehatan,
-    COUNT(*) AS total
-FROM LatestStatus
-GROUP BY status_kesehatan;
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
+
 
 app.post("/api/cows/tambahsapi", async (req, res) => {
   const { id, gender, age, weight, healthRecord } = req.body; // Make sure 'id' is provided in the body
@@ -1549,41 +1511,55 @@ app.post("/api/predict/productivity", async (req, res) => {
 });
 
 // ---------------------------------------------------------USERS---------------------------------------------------------------
-app.post("/api/register", async (req, res) => {
-  let { username, password, email, role, phone, cage_location } = req.body;
+app.post("/api/users/register", async (req, res) => {
+  let { email, password, nama, no_hp, alamat, role } = req.body;
 
   // Validasi input
-  if (!username || !password || !email || !role || !phone) {
+  if (!email || !password || !nama || !no_hp || !alamat || !role) {
+    console.log("User registration failed: Missing required fields");
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  // Validate password strength (example: minimum 8 characters)
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters long" });
+  }
+
+  const client = await pool.connect();
+
   try {
+    await client.query("BEGIN");
+
+    // Check if email already exists
+    const emailCheckQuery = "SELECT email FROM users WHERE email = $1";
+    const emailCheckResult = await client.query(emailCheckQuery, [email]);
+
+    if (emailCheckResult.rows.length > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: "Email already exists" });
+    }
+
     // Hash password sebelum menyimpan ke database
     const hashedPassword = await bcrypt.hash(password, 10); // 10 adalah jumlah salt rounds
 
-    // Query untuk menyimpan data
-    if (cage_location === "") cage_location = "null";
     const query = `
-    INSERT INTO users(username, password, email, role, created_at, updated_at, phone, cage_location)
-  VALUES($1, $2, $3, $4, NOW(), NOW(), $5, $6) RETURNING id; `;
+      INSERT INTO users(nama, password, email, role, no_hp, alamat)
+      VALUES($1, $2, $3, $4, $5, $6) RETURNING id;
+    `;
 
-    const values = [
-      username,
-      hashedPassword,
-      email,
-      role,
-      phone,
-      cage_location,
-    ];
-    // Eksekusi query dan ambil hasilnya
-    const result = await pool.query(query, values);
+    const values = [nama, hashedPassword, email, role, no_hp, alamat];
 
-    // Mengirimkan response sukses dengan ID user yang baru
-    res
-      .status(201)
-      .json({ id: result.rows[0].id, message: "User registered successfully" });
+    const result = await client.query(query, values);
+
+    await client.query("COMMIT");
+
+    res.status(201).json({ id: result.rows[0].id, message: "User registered successfully" });
   } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error while registering user:", err.stack); // Log the full error stack trace
     res.status(500).json({ error: "Internal server error" });
+  } finally {
+    client.release();
   }
 });
 
@@ -1597,42 +1573,81 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    // Query untuk mengambil user berdasarkan username
+    // Query untuk mengambil user berdasarkan email (username)
     const query =
-      "SELECT id, username, password, role, email, phone, cage_location FROM users WHERE username = $1";
+      "SELECT id, email, password, nama, role, no_hp, alamat FROM users WHERE email = $1";
     const result = await pool.query(query, [username]);
 
     // Jika user tidak ditemukan
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid username or password" });
+      return res.status(401).json({ error: "Invalid email" });
     }
 
     const user = result.rows[0];
 
+
     // Verifikasi password yang dimasukkan dengan hash yang ada di database
     const match = await bcrypt.compare(password, user.password);
 
+
     if (!match) {
-      return res.status(401).json({ error: "Invalid username or password" });
+      return res.status(401).json({ error: "Invalid password" });
     }
 
     // Jika password cocok, login berhasil
     res.status(200).json({
       message: "Login successful",
       userId: user.id,
-      username: user.username,
+      nama: user.nama,
       role: user.role,
       email: user.email,
-      phone: user.phone,
-      cage_location: user.cage_location,
+      no_hp: user.no_hp,
+      alamat: user.alamat,
     });
   } catch (err) {
+    console.error("Error while logging in:", err.stack);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
+app.put("/api/users/updateprofile", async (req, res) => {
+  const { userId, username, email, phone, cageLocation } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const query = `
+      UPDATE users
+      SET email = $1, phone = $2, alamat = $3
+      WHERE email = $1
+      RETURNING *;
+    `;
+
+    const values = [email, phone, cageLocation];
+    const result = await client.query(query, values);
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await client.query("COMMIT");
+    res.json({ message: "Profile updated", user: result.rows[0] });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    client.release();
+  }
+});
+
 // ---------------------------------------------------------SERVER---------------------------------------------------------------
-// Middleware untuk menangani error
 app.use((err, req, res, next) => {
   res.status(500).json({
     error: "Internal Server Error",
@@ -1641,53 +1656,7 @@ app.use((err, req, res, next) => {
 });
 
 // ---------------------------------------------------------FUNGSI---------------------------------------------------------------
-// Fungsi untuk memproses data hasil query
-const processMilkAndWeightData = (rows) => {
-  // Struktur hasil akhir
-  const result = {
-    produksiSusu: {},
-    beratBadan: {},
-  };
 
-  rows.forEach((row) => {
-    // Format tanggal ke bulan dan tahun
-    const produksiMonth = row.produksi_susu_tanggal
-      ? new Date(row.produksi_susu_tanggal).toLocaleString("id-ID", {
-        month: "long",
-        year: "numeric",
-      })
-      : null;
-    const beratMonth = row.berat_badan_tanggal
-      ? new Date(row.berat_badan_tanggal).toLocaleString("id-ID", {
-        month: "long",
-        year: "numeric",
-      })
-      : null;
-
-    // Proses data produksi susu
-    if (produksiMonth) {
-      if (!result.produksiSusu[produksiMonth])
-        result.produksiSusu[produksiMonth] = [];
-      const produksiIndex = result.produksiSusu[produksiMonth].length;
-      result.produksiSusu[produksiMonth].push({
-        x: produksiIndex,
-        y: parseFloat(row.produksi),
-      });
-    }
-
-    // Proses data berat badan
-    if (beratMonth) {
-      if (!result.beratBadan[beratMonth]) result.beratBadan[beratMonth] = [];
-      const beratIndex = result.beratBadan[beratMonth].length;
-      result.beratBadan[beratMonth].push({
-        x: beratIndex,
-        y: parseFloat(row.berat),
-      });
-    }
-  });
-
-  return result;
-};
 
 // Check if server is running
 app.get("/", (req, res) => {

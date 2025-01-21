@@ -69,6 +69,7 @@ class _CowAnalysisPageState extends State<CowAnalysisPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jumlah sapi yang sehat'),
+        leading: null,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())

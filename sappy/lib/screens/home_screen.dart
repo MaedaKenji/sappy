@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -35,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = false;
 
   @override
-  void initState() {
+  void initState(){
     super.initState();
-    _initializeData();
+     _initializeData();
   }
 
   Future<void> _initializeData() async {
@@ -208,55 +207,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  List<BarChartGroupData> milkProductionPerMonthDynamic() {
-    return [
-      BarChartGroupData(
-        x: 0,
-        barRods: [
-          BarChartRodData(
-            borderRadius: const BorderRadius.all(Radius.circular(0)),
-            toY: susuBulanan[0]['totalProduksi'],
-            color: const Color(0xFFE6B87D),
-            width: 20,
-          ),
-        ],
-      ),
-      BarChartGroupData(
-        x: 1,
-        barRods: [
-          BarChartRodData(
-            borderRadius: const BorderRadius.all(Radius.circular(0)),
-            toY: 250,
-            color: const Color(0xFFE6B87D),
-            width: 20,
-          ),
-        ],
-      ),
-      BarChartGroupData(
-        x: 2,
-        barRods: [
-          BarChartRodData(
-            borderRadius: const BorderRadius.all(Radius.circular(0)),
-            toY: 900,
-            color: const Color(0xFFE6B87D),
-            width: 20,
-          ),
-        ],
-      ),
-      BarChartGroupData(
-        x: 3,
-        barRods: [
-          BarChartRodData(
-            borderRadius: const BorderRadius.all(Radius.circular(0)),
-            toY: 100,
-            color: const Color(0xFFE6B87D),
-            width: 20,
-          ),
-        ],
-      ),
-    ];
-  }
-
   List<BarChartGroupData> milkProductionPerMonthDynamics() {
     return List.generate(susuBulanan.length, (index) {
       return BarChartGroupData(
@@ -345,10 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'sapi_diberi_pakan': '/api/cows/data/sapi_diberi_pakan',
     };
 
-    setState(() {
-      isLoading = true;
-    });
-
     try {
       final responses = await Future.wait([
         _fetchWithTimeout('$baseUrl:$port${endpoints['susu']}'),
@@ -382,69 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
         {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
         {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
       ];
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<List<Map<String, String>>> _fetchSakitData() async {
-    final baseUrl = dotenv.env['BASE_URL'] ?? 'http://defaulturl.com';
-    final port = dotenv.env['PORT'] ?? '8080';
-    final url = '$baseUrl:$port/api/data/summary/dokter';
-
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final response =
-          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonResponse = jsonDecode(response.body);
-
-        // Mengolah data dari JSON response
-        final Map<String, String> dataMap = {
-          for (var item in jsonResponse)
-            item['status_kesehatan']: item['total'],
-        };
-
-        return [
-          {
-            'title': dataMap['sehat'] ?? '0',
-            'subtitle': 'Sapi sehat',
-          },
-          {
-            'title': dataMap['sakit'] ?? '0',
-            'subtitle': 'Sapi terindikasi sakit',
-          },
-          {
-            'title': '0', // Jika diperlukan, tambahkan data lain
-            'subtitle': 'Sapi dalam pengobatan',
-          },
-        ];
-      } else {
-        // Handle jika status code bukan 200
-        return [
-          {'title': 'Error', 'subtitle': 'Gagal mengambil data dari server'},
-          {'title': 'Error', 'subtitle': 'Gagal mengambil data dari server'},
-          {'title': 'Error', 'subtitle': 'Gagal mengambil data dari server'},
-        ];
-      }
-    } catch (e) {
-      // Handle jika terjadi kesalahan
-      return [
-        {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
-        {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
-        {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
-      ];
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    } 
   }
 
   Future<Map<String, Map<String, List<FlSpot>>>> _fetchChartData() async {
@@ -453,8 +337,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final url = '$baseUrl:$port/api/data/chart';
 
     try {
+      final stopwatch = Stopwatch()..start();
       final response =
           await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
+      // Berhentikan timer
+      stopwatch.stop();
+
+      // Hitung waktu respons dalam detik
+      final responseTimeInSeconds = stopwatch.elapsedMilliseconds / 1000;
+
+      // Tampilkan waktu respons
+      debugPrint('Response Time: $responseTimeInSeconds detik');
 
       if (response.statusCode == 200) {
         final rawData =
@@ -482,9 +375,9 @@ class _HomeScreenState extends State<HomeScreen> {
           chartData['Milk']?[monthYear]
               ?.add(FlSpot(day, (entry['milk'] as num).toDouble()));
         }
-
         return chartData;
       } else {
+        debugPrint('Failed to fetch chart data. Status code: ${response.statusCode}');
         return {
           'Error': {
             'Error': [const FlSpot(0, 0)]
@@ -492,6 +385,9 @@ class _HomeScreenState extends State<HomeScreen> {
         };
       }
     } catch (e) {
+        debugPrint(
+          'Error fetching chart data: $e',);
+
       return {
         'Error': {
           'Error': [const FlSpot(0, 0)]
@@ -540,10 +436,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchBulananDanPredict() async {
-    setState(() {
-      isLoading = true;
-    });
-
     try {
       final response = await http
           .get(
@@ -576,25 +468,16 @@ class _HomeScreenState extends State<HomeScreen> {
           content: Text('Gagal memuat data'),
         ),
       );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    } 
   }
 
   Future<void> fetchSickIndicatedDinamis() async {
-    // final response = await http
-    //     .get(
-    //       Uri.parse(
-    //           '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/predict/monthly'),
-    //     )
-    //     .timeout(const Duration(seconds: 5));
     String apiUrl =
         '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/cows/dokter-home'; // Ganti dengan URL API Anda
     try {
       final response =
           await http.get(Uri.parse(apiUrl)).timeout(const Duration(seconds: 5));
+          
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -619,26 +502,66 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<List<Map<String, String>>> _fetchSakitData() async {
+    final baseUrl = dotenv.env['BASE_URL'];
+    final port = dotenv.env['PORT'];
+    final url = '$baseUrl:$port/api/data/summary/dokter';
+
+    try {
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
+      
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Mengolah data dari JSON response
+        final Map<String, String> dataMap = {
+          for (var item in jsonResponse)
+            item['status_kesehatan']: item['total'],
+        };
+
+        return [
+          {
+            'value': dataMap['sehat'] ?? '0',
+            'subtitle': 'Sapi sehat',
+          },
+          {
+            'value': dataMap['sakit'] ?? '0',
+            'subtitle': 'Sapi terindikasi sakit',
+          },
+          {
+            'value': '0',
+            'subtitle': 'Sapi dalam pengobatan',
+          },
+        ];
+      } else {
+        // Handle jika status code bukan 200
+        return [
+          {'title': 'Error', 'subtitle': 'Gagal mengambil data dari server'},
+          {'title': 'Error', 'subtitle': 'Gagal mengambil data dari server'},
+          {'title': 'Error', 'subtitle': 'Gagal mengambil data dari server'},
+        ];
+      }
+    } catch (e) {
+      // Handle jika terjadi kesalahan
+      return [
+        {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
+        {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
+        {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
+      ];
+    }
+  }
+
   Future<void> _refreshData() async {
-    final RoleRole = Provider.of<UserRole>(context, listen: false).role;
+    final rolerRole = Provider.of<UserRole>(context, listen: false).role;
 
     setState(() {
       isLoading = true;
     });
 
     try {
-      final summaryData = await _fetchSummaryData();
-
-      setState(() {
-        _futureSummaryData = Future.value(summaryData);
-      });
-
-      await _fetchBulananDanPredict();
-      await assignFetchedData();
-      await fetchBestCombination();
-
-      // Cek apakah userRole disertakan, jika ya lakukan pengecekan role
-      if (RoleRole == 'dokter' || RoleRole == 'doctor') {
+      if (rolerRole == 'dokter' || rolerRole == 'doctor') {
         final summarySakit = await _fetchSakitData();
 
         setState(() {
@@ -646,6 +569,16 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         await fetchSickIndicatedDinamis();
+      } else {
+        final summaryData = await _fetchSummaryData();
+
+        setState(() {
+          _futureSummaryData = Future.value(summaryData);
+        });
+
+        await assignFetchedData();
+        await fetchBestCombination();
+        await _fetchBulananDanPredict();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -678,15 +611,16 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        toolbarHeight: 172,
+        toolbarHeight: MediaQuery.of(context).size.height * 0.2,
         elevation: 0,
+        leading: null,
         flexibleSpace: Stack(
           children: [
             Align(
               alignment: Alignment.topCenter,
               child: SizedBox(
                 height: kToolbarHeight * 2.8,
-                child: Container(                  
+                child: Container(
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     gradient: LinearGradient(
@@ -848,8 +782,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             CustomBarChart(
                               title: 'Produksi Susu Per Bulan',
-                              data: milkProductionPerMonthDynamics(),
+                              barGroupData: milkProductionPerMonthDynamics(),
                               predictedNextMonth: predictedNextMonth,
+                              data: susuBulanan,
+
                             ),
                           ],
                         ),
@@ -880,38 +816,55 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
                             const SizedBox(height: 16),
-                            const Text(
+                            if (sickIndicatedDinamis.isNotEmpty)
+                              const Text(
                               'Sapi Terindikasi Sakit :',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF8F3505),
                               ),
-                            ),
+                              ),
+                            if (sickIndicatedDinamis.isEmpty)
+                              Container(
+                              padding: const EdgeInsets.all(16),
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.green[100],
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                color: Colors.green,
+                                width: 1,
+                                ),
+                              ),
+                              child: const Text(
+                                'Semua sapi sehat',
+                                style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green,
+                                ),
+                              ),
+                              ),
                             for (var cattle in sickIndicatedDinamis)
                               _buildCattleCard(
-                                context,
+                              context,
+                              id: cattle['id'],
+                              gender: cattle['gender'],
+                              info: cattle['info'],
+                              checked: cattle['checked'] ?? false,
+                              onPressed: () {
+                                return DataSapiPage(
                                 id: cattle['id'],
                                 gender: cattle['gender'],
-                                info: cattle['info'],
-                                checked: cattle['checked'] ?? false,
-                                onPressed: () {
-                                  return DataSapiPage(
-                                    id: cattle['id'],
-                                    gender: cattle['gender'],
-                                    age: cattle['age'],
-                                    healthStatus: 'SAKIT',
-                                    isProductive: true,
-                                    isConnectedToNFCTag:
-                                        cattle['isConnectedToNFCTag'],
-                                  );
-                                },
+                                age: cattle['age'],
+                                healthStatus: 'SAKIT',
+                                isProductive: true,
+                                isConnectedToNFCTag:
+                                  cattle['isConnectedToNFCTag'],
+                                );
+                              },
                               ),
-                            const SizedBox(height: 20),
-                            CustomBarChart(
-                                title: 'Jumlah Sapi Sakit per Bulan',
-                                data: sickCowPerMonthData(),
-                                predictedNextMonth: 0),
                           ],
                         ),
                       ),

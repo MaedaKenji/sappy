@@ -79,12 +79,13 @@ class _InputDataPageState extends State<InputDataPage> {
         }
       } else {
         // Jika gagal, tampilkan error
+        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Gagal mengirim data')));
+            .showSnackBar(const SnackBar(content: Text('Gagal mengirim data')));
       }
     } catch (error) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Terjadi kesalahan')));
+          .showSnackBar(const SnackBar(content: Text('Terjadi kesalahan')));
     }
   }
 

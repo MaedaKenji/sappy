@@ -87,15 +87,13 @@ class _DataPageState extends State<DataPage> {
 
     if (response.statusCode == 200) {
       List<dynamic> data = json.decode(response.body);
-      debugPrint("data : ${data}");
+      debugPrint("data untuk datapage: ${data}");
       // Convert JSON to List<Cattle>
       final cattleList = data.map((item) => Cattle.fromJson(item)).toList();
-      debugPrint("cattleList : ${cattleList}");
 
       // Update provider
       if (mounted) {
         final cattleListProvider = data.map((item) => CattleProviderClass.fromJson(item)).toList();
-        debugPrint("cattleListProvider : ${cattleListProvider}");
         Provider.of<CattleProvider>(context, listen: false).setCattleList(cattleListProvider);
       }
 
@@ -123,11 +121,12 @@ class _DataPageState extends State<DataPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: null,
         flexibleSpace: Stack(
           clipBehavior: Clip.none,
           children: [
         Container(
-          height: 70,
+          height: 85,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
           colors: [Color(0xFFC35804), Color(0xFFE6B87D)],
@@ -145,7 +144,7 @@ class _DataPageState extends State<DataPage> {
           left: 20,
           right: 20,
           child: Padding(
-            padding: EdgeInsets.only(top: 12.0),
+            padding: EdgeInsets.only(top: 25.0),
             child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

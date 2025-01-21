@@ -3,20 +3,30 @@ import 'package:fl_chart/fl_chart.dart';
 
 class CustomBarChart extends StatelessWidget {
   final String title;
-  final List<BarChartGroupData> data;
-  final double predictedNextMonth; // Tambahkan variabel baru
+  final List<BarChartGroupData> barGroupData;
+  final double predictedNextMonth;
+  List data;
 
-  const CustomBarChart({
+
+  CustomBarChart({
     super.key,
     required this.title,
+    required this.barGroupData,
+    required this.predictedNextMonth,
     required this.data,
-    required this.predictedNextMonth, // Tambahkan ke konstruktor
-  });
+  }) {
+    // Debug print in the constructor
+    debugPrint('CustomBarChart Constructor:');
+    debugPrint('Title: $title');
+    debugPrint('Predicted Next Month: $predictedNextMonth');
+    debugPrint('Data: $data');
+  }
+   
+ 
 
   @override
   Widget build(BuildContext context) {
-    // Nilai maksimal dari data asli
-    double maxYValueAsli = data
+    double maxYValueAsli = barGroupData
         .expand((group) => group.barRods.map((rod) => rod.toY))
         .fold<double>(
           0,
@@ -33,7 +43,7 @@ class CustomBarChart extends StatelessWidget {
     // double maxY = maxYValue + (maxYValue * 0.2); // Alternatif: margin dinamis
 
     final predictionBar = BarChartGroupData(
-      x: data.length,
+      x: barGroupData.length,
       barRods: [
         if (title == 'Produksi Susu per Bulan')
           BarChartRodData(
@@ -97,17 +107,23 @@ class CustomBarChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        final months = ['Sep', 'Okt', 'Nov', 'Des', 'Jan'];
+                        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                         final index = value.toInt();
                         if (index < 0 || index >= months.length) {
                           return const SizedBox.shrink();
                         }
+                        final monthIndex = index < data.length
+                          ? int.parse(data[index]['bulan'].split('-')[1]) - 1
+                          : index;
+                        final monthTitle = monthIndex >= 0 && monthIndex < months.length
+                          ? months[monthIndex]
+                          : '';
                         return Text(
-                          months[index],
+                          monthTitle,
                           style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
                           ),
                         );
                       },
@@ -129,7 +145,7 @@ class CustomBarChart extends StatelessWidget {
                 ),
                 maxY: maxY,
                 barGroups: [
-                  ...data.map((barGroup) {
+                  ...barGroupData.map((barGroup) {
                     return BarChartGroupData(
                       x: barGroup.x,
                       barRods: barGroup.barRods.map((rod) {

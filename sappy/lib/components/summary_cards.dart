@@ -10,62 +10,61 @@ class SummaryCards extends StatelessWidget {
     required this.data,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final userRole = Provider.of<UserRole>(context);
+@override
+Widget build(BuildContext context) {
+  final userRole = Provider.of<UserRole>(context);
 
-    Map<String, List<SummaryCard>> summaryCardRole = {
-      'user': [
-        SummaryCard(
-            title: data[0]['title'] + ' L',
-            subtitle: 'Perolehan susu hari ini'),
-        SummaryCard(
-            title: data[1]['title'], subtitle: 'Sapi yang telah diperah'),
-        SummaryCard(
-            title: data[2]['title'], subtitle: 'Sapi yang telah diberi pakan'),
-      ],
-      'doctor': [
-        SummaryCard(title: data[0]['title'], subtitle: 'Sapi sehat'),
-        SummaryCard(
-            title: data[1]['title'], subtitle: 'Sapi terindikasi sakit'),
-      ],
-      'dokter': [
-        SummaryCard(title: data[0]['title'], subtitle: 'Sapi sehat'),
-        SummaryCard(
-            title: data[1]['title'], subtitle: 'Sapi terindikasi sakit'),
-      ],
-      'admin': [
-        SummaryCard(
-            title: data[0]['title'] + ' L',
-            subtitle: 'Perolehan susu hari ini'),
-        SummaryCard(
-            title: data[1]['title'], subtitle: 'Sapi yang telah diperah'),
-        SummaryCard(
-            title: data[2]['title'], subtitle: 'Sapi yang telah diberi pakan'),
-      ],
+  // Dapatkan kartu berdasarkan peran pengguna
+  List<SummaryCard> cards = getSummaryCards(userRole.role);
 
-      // 'doctor': [
-      //   const SummaryCard(title: '35', subtitle: 'Sapi sehat'),
-      //   const SummaryCard(title: '8', subtitle: 'Sapi terindikasi sakit'),
-      //   const SummaryCard(title: '5', subtitle: 'Sapi dalam pengobatan'),
-      // ],
-      // 'dokter': [
-      //   const SummaryCard(title: '35', subtitle: 'Sapi sehat'),
-      //   const SummaryCard(title: '8', subtitle: 'Sapi terindikasi sakit'),
-      //   const SummaryCard(title: '5', subtitle: 'Sapi dalam pengobatan'),
-      // ],
-    };
+  return IntrinsicHeight(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: cards,
+    ),
+  );
+}
 
-    // Get the correct summary cards for the current role
-    List<SummaryCard> cards = summaryCardRole[userRole.role] ?? [];
-
-    return IntrinsicHeight(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: cards,
-      ),
-    );
+// Fungsi untuk mendapatkan summary card berdasarkan peran pengguna
+List<SummaryCard> getSummaryCards(String role) {
+  String getValue(int index, String defaultValue) {
+    return data.length > index && data[index]['value'] != null
+        ? data[index]['value'].toString()
+        : defaultValue;
   }
+
+  switch (role) {
+    case 'user':
+      return [
+        SummaryCard(
+            title: "${getValue(0, '0')} L",
+            subtitle: 'Perolehan susu hari ini'),
+        SummaryCard(
+            title: getValue(1, '0'), subtitle: 'Sapi yang telah diperah'),
+        SummaryCard(
+            title: getValue(2, '0'), subtitle: 'Sapi yang telah diberi pakan'),
+      ];
+    case 'doctor':
+    case 'dokter':
+      return [
+        SummaryCard(title: getValue(0, '0'), subtitle: 'Sapi sehat'),
+        SummaryCard(
+            title: getValue(1, '0'), subtitle: 'Sapi terindikasi sakit'),
+      ];
+    case 'admin':
+      return [
+        SummaryCard(
+            title: "${getValue(0, '0')} L",
+            subtitle: 'Perolehan susu hari ini'),
+        SummaryCard(
+            title: getValue(1, '0'), subtitle: 'Sapi yang telah diperah'),
+        SummaryCard(
+            title: getValue(2, '0'), subtitle: 'Sapi yang telah diberi pakan'),
+      ];
+    default:
+      return [];
+  }
+}
 }
 
 class SummaryCard extends StatelessWidget {

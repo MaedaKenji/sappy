@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sappy/provider/user_role.dart';
 import 'screens/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -11,12 +10,7 @@ import 'package:sappy/provider/cattle_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   WakelockPlus.enable();
-  // // Set warna notification bar agar sama seperti background
-  // SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-  //   statusBarColor: Color(0xFFC35804), // Ubah warna sesuai dengan background
-  //   statusBarIconBrightness:
-  //       Brightness.dark, // Warna ikon di status bar (dark untuk teks gelap)
-  // ));
+  
 
   await dotenv.load();
 

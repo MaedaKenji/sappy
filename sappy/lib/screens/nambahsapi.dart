@@ -18,7 +18,7 @@ class _TambahSapiPageState extends State<TambahSapiPage> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
-  final TextEditingController _healthController = TextEditingController();
+  
   
 
   String? _gender;
@@ -130,7 +130,6 @@ class _TambahSapiPageState extends State<TambahSapiPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Custom AppBar with Stack
           Stack(
             clipBehavior: Clip.none,
             children: [

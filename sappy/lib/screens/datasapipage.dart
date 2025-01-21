@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -562,12 +564,12 @@ class _DataSapiPageState extends State<DataSapiPage> {
 
       if (response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Data berhasil dikirim!')),
+          const SnackBar(content: Text('Data berhasil dikirim!')),
         );
       } else {
         // Gagal
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengirim data ke server!')),
+        SnackBar(content: Text('Gagal mengirim data ke server response status code != 201, error details: ${response.body} ')),
         );
       }
     } catch (e) {
@@ -1208,10 +1210,12 @@ class _DataSapiPageState extends State<DataSapiPage> {
                                   borderSide: const BorderSide(
                                       color: Color(0xFF8F3505)),
                                 ),
-                                hintText: userRole.role == 'admin' ||
-                                        userRole.role == 'user'
-                                    ? 'Diagnosis dan pengobatan hanya bisa diisi oleh dokter!'
-                                    : 'Masukkan diagnosis dan pengobatan...',
+                                hintText: userRole.role == 'admin' || userRole.role == 'user'
+                                  ? (historyDataDiagnosis.isNotEmpty
+                                    ? 'Diagnosis: ${historyDataDiagnosis.first['data']}'
+                                    : 'Diagnosis dan pengobatan hanya bisa diisi oleh dokter!')
+                                  : 'Masukkan diagnosis dan pengobatan...',
+                                
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -1461,7 +1465,7 @@ class _DataSapiPageState extends State<DataSapiPage> {
                                 ),
                               ),
                               child: isLoading
-                                  ? CircularProgressIndicator()
+                                  ? const CircularProgressIndicator()
                                   : const Text(
                                       'SELESAI DIAGNOSIS',
                                       style: TextStyle(

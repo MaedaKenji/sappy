@@ -1,8 +1,15 @@
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sappy/components/dialogs.dart';
 import 'package:sappy/components/logout_dialog.dart';
 import 'package:sappy/provider/user_role.dart';
 import 'package:sappy/screens/login_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -44,11 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _phoneController.text = userRole.phoneNumber;
     }
     if (_roleController.text.isEmpty && userRole.role.isNotEmpty) {
-      _roleController.text = userRole.role == 'user'
-          ? 'Peternak'
-          : userRole.role == 'admin'
-              ? 'Admin'
-              : 'Dokter Hewan';
+      _roleController.text = userRole.role;
     }
     if (_locationController.text.isEmpty && userRole.cageLocation.isNotEmpty) {
       _locationController.text = userRole.cageLocation;
@@ -56,71 +59,43 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFC35804), Color(0xFFE6B87D)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
+        title: const Text(
+          'User Profile',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.white, size: 24),
+            onPressed: _saveProfile,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white, size: 24),
+            onPressed: () => _showLogoutDialog(context),
+          ),
+        ],
+      ),
       body: Column(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                height: 70,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFC35804), Color(0xFFE6B87D)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                ),
-              ),
-              const Positioned(
-                top: 20,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Text(
-                    'User Profile',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 20,
-                left: 20,
-                child: GestureDetector(
-                  onTap: () {
-                    _saveProfile();
-                  },
-                  child: const Icon(
-                    Icons.edit,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 20,
-                right: 20,
-                child: GestureDetector(
-                  onTap: () {
-                    _showLogoutDialog(context);
-                  },
-                  child: const Icon(
-                    Icons.logout,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-            ],
-          ),
           Expanded(
             child: SingleChildScrollView(
               padding:
@@ -159,6 +134,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     icon: Icons.work,
                     label: 'Role',
                     controller: _roleController,
+                    readOnly: true,
                   ),
                   if (userRole.role == 'user') ...[
                     const SizedBox(height: 20),
@@ -185,7 +161,7 @@ class _ProfilePageState extends State<ProfilePage> {
           title: 'Logout',
           content: 'Are you sure you want to logout?',
           onConfirm: () {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
                 builder: (context) {
@@ -197,6 +173,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                 },
               ),
+              (Route<dynamic> route) => false, // Remove all routes
             );
           },
         );
@@ -204,10 +181,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  bool? readOnly;
   Widget _buildInfoRow({
     required IconData icon,
     required String label,
     required TextEditingController controller,
+    bool readOnly = false, // Default value is false
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -229,6 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 2),
               TextField(
                 controller: controller,
+                readOnly: readOnly, // Set readOnly property
                 style: const TextStyle(fontSize: 16),
                 decoration: const InputDecoration(
                   contentPadding: EdgeInsets.symmetric(vertical: 1),
@@ -246,7 +226,96 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _saveProfile() {
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    return emailRegex.hasMatch(email);
+  }
+
+  bool _isValidPhone(String phone) {
+    final phoneRegex = RegExp(r'^(?:\+62|0)[0-9]{9,12}$');
+    return phoneRegex.hasMatch(phone);
+  }
+
+  Future<void> _saveProfile() async {
+    String _email = _emailController.text;
+    String _phone = _phoneController.text;
+    String _location = _locationController.text;
+    final userRole = Provider.of<UserRole>(context, listen: false);
+    
+
+    if (!_isValidEmail(_email)) {
+      ShowResultDialog.show(
+        context,
+        false,
+        customMessage: 'Email tidak valid',
+      );
+      return;
+    }
+
+    if (!_isValidPhone(_phone)) {
+      ShowResultDialog.show(
+        context,
+        false,
+        customMessage: 'Nomor telepon tidak valid',
+      );
+      return;
+    }
+
+    if (userRole.role == 'user') {
+      if (_location.isEmpty) {
+        ShowResultDialog.show(
+          context,
+          false,
+          customMessage: 'Lokasi kandang tidak boleh kosong',
+        );
+        return;
+      }
+    }
+
+    try {
+      final url =
+          '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/users/updateprofile';
+
+      Map data = {
+        'email': _email,
+        'phone': _phone,
+      };
+      if (userRole.role == 'user') {
+        data['cageLocation'] = _location;
+      }
+      final response = await http
+          .put(
+            Uri.parse(url),
+            headers: <String, String>{
+              'Content-Type': 'application/json; charset=UTF-8',
+            },
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        ShowResultDialog.show(
+          context,
+          false,
+          customMessage: 'Terjadi kesalahan: ${response.body}',
+        );
+        return;
+      } else {
+        ShowResultDialog.show(
+          context,
+          true,
+          customMessage: 'Profil berhasil disimpan!',
+        );
+      }
+    } catch (e) {
+      ShowResultDialog.show(
+        context,
+        false,
+        customMessage: 'Terjadi kesalahan: $e',
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Profil berhasil disimpan!'),
