@@ -52,76 +52,76 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     // Hardcoded roles for testing (remove in production)
-    if (email == 'user@gmail.com') {
-      userRole.login(email, 'user', 'Atha Rafifi Azmi', '081234567890',
-          'Jl. Raya Kediri - Nganjuk KM 10');
-    } else if (email == 'doctor@gmail.com') {
-      userRole.login(
-          email, 'doctor', 'Dr. Agus Fuad Hasan', '081234567890', '');
-    } else if (email == 'admin@gmail.com') {
-      userRole.login(email, 'admin', 'Admin Ternaknesia', '081234567890', '');
-    } else if (email == 'u') {
-      userRole.login(email, 'user', 'Atha Rafifi Azmi', '081234567890', '');
-    } else if (email == 'd') {
-      userRole.login(
-          email, 'doctor', 'Dr. Agus Fuad Hasan', '081234567890', '');
-    } else if (email == 'a') {
-      userRole.login(email, 'admin', 'Admin Ternaknesia', '081234567890', '');
-    } else {
-      try {
-        // Make API call to login
-        final response = await http
-            .post(
-          Uri.parse(
-              '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/login'),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode({'username': email, 'password': password}),
-        )
-            .timeout(
-          const Duration(seconds: 6), // Timeout after 6 seconds
-          onTimeout: () {
-            throw TimeoutException('Request timed out');
-          },
-        );
+    // if (email == 'user@gmail.com') {
+    //   userRole.login(email, 'user', 'Atha Rafifi Azmi', '081234567890',
+    //       'Jl. Raya Kediri - Nganjuk KM 10');
+    // } else if (email == 'doctor@gmail.com') {
+    //   userRole.login(
+    //       email, 'doctor', 'Dr. Agus Fuad Hasan', '081234567890', '');
+    // } else if (email == 'admin@gmail.com') {
+    //   userRole.login(email, 'admin', 'Admin Ternaknesia', '081234567890', '');
+    // } else if (email == 'u') {
+    //   userRole.login(email, 'user', 'Atha Rafifi Azmi', '081234567890', '');
+    // } else if (email == 'd') {
+    //   userRole.login(
+    //       email, 'doctor', 'Dr. Agus Fuad Hasan', '081234567890', '');
+    // } else if (email == 'a') {
+    //   userRole.login(email, 'admin', 'Admin Ternaknesia', '081234567890', '');
+    // } else {
+    try {
+      // Make API call to login
+      final response = await http
+          .post(
+        Uri.parse('${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'username': email, 'password': password}),
+      )
+          .timeout(
+        const Duration(seconds: 6), // Timeout after 6 seconds
+        onTimeout: () {
+          throw TimeoutException('Request timed out');
+        },
+      );
 
-        // Handle API response
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> responseBody = json.decode(response.body);
+      // Handle API response
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = json.decode(response.body);
 
-          // Validate the response data
-          if (responseBody['role'] == null ) {
-            throw Exception('Invalid response from server');  
-          }
-
-          // Assign user role and data
-          userRole.login(
-            responseBody['email'],
-            responseBody['role'],
-            responseBody['nama'],
-            responseBody['no_hp'] ?? '', // Use empty string if phone is null
-            responseBody['alamat'] ?? '', // Use empty string if cage_location is null
-          );
-        } else {
-          // Handle API errors
-          final errorMessage =
-              json.decode(response.body)['error'] ?? 'Login failed';
-          ShowResultDialog.show(context, false, customMessage: errorMessage);
-          userRole.logout();
-          return;
+        // Validate the response data
+        if (responseBody['role'] == null) {
+          throw Exception('Invalid response from server');
         }
-      } on TimeoutException {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request timed out. Please try again.')),
+
+        // Assign user role and data
+        userRole.login(
+          responseBody['email'],
+          responseBody['role'],
+          responseBody['nama'],
+          responseBody['no_hp'] ?? '', // Use empty string if phone is null
+          responseBody['alamat'] ??
+              '', // Use empty string if cage_location is null
         );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred: $e')),
-        );
-      } finally {
-        setState(() {
-          isLoading = false; // Stop loading
-        });
+        userRole.assignIsLoggedIn();
+      } else {
+        // Handle API errors
+        final errorMessage =
+            json.decode(response.body)['error'] ?? 'Login failed';
+        ShowResultDialog.show(context, false, customMessage: errorMessage);
+        userRole.logout();
+        return;
       }
+    } on TimeoutException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Request timed out. Please try again.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false; // Stop loading
+      });
     }
 
     // Navigate to the main page if login is successful

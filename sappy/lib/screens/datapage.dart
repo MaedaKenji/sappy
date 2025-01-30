@@ -100,6 +100,7 @@ class _DataPageState extends State<DataPage> {
       return cattleList;
     } else {
       // ignore: use_build_context_synchronously
+      debugPrint('Failed to load cattle data with status code: ${response.statusCode} ${response.body}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

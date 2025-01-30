@@ -46,9 +46,17 @@ class UserRole with ChangeNotifier {
     _name = newName;
     _phoneNumber = newPhoneNumber;
     _cageLocation = newCageLocation;
-    _isLoggedIn = true;
+    assignIsLoggedIn();
     notifyListeners();
   }
+
+  void assignIsLoggedIn() {
+    if (_email.isNotEmpty && _role.isNotEmpty && _name.isNotEmpty && _phoneNumber.isNotEmpty && _cageLocation.isNotEmpty) {
+      _isLoggedIn = true;
+      notifyListeners();
+    }
+  }
+
 
   void logout() {
     _role = '';

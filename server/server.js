@@ -7,10 +7,11 @@ const moment = require("moment-timezone");
 const { Pool } = require("pg");
 const path = require("path");
 const { title } = require("process");
-
-require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
-
 const nowUtcPlus7 = moment.tz("Asia/Bangkok").format();
+
+
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 
 const app = express();
 app.use(express.json());
@@ -32,7 +33,10 @@ const pool = new Pool({
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
-  port: process.env.PGPORT,
+  // port: process.env.PGPORT,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 const poolTernaknesiaRelational = new Pool({
@@ -40,11 +44,15 @@ const poolTernaknesiaRelational = new Pool({
   host: process.env.PGHOST, // Ganti dengan host PostgreSQL Anda
   database: process.env.PGDATABASE, // Ganti dengan nama database kedua Anda
   password: process.env.PGPASSWORD, // Ganti dengan password PostgreSQL Anda
-  port: process.env.PGPORT,
+  // port: process.env.PGPORT,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 // Test the connection
-poolTernaknesiaRelational.connect();
+// poolTernaknesiaRelational.connect();
+pool.connect();
 
 app.use(
   cors({
@@ -1563,6 +1571,8 @@ app.post("/api/users/register", async (req, res) => {
   }
 });
 
+
+
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -1606,7 +1616,7 @@ app.post("/api/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Error while logging in:", err.stack);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error saat login" });
   }
 });
 
@@ -1624,7 +1634,7 @@ app.put("/api/users/updateprofile", async (req, res) => {
 
     const query = `
       UPDATE users
-      SET email = $1, phone = $2, alamat = $3
+      SET email = $1, no_hp = $2, alamat = $3
       WHERE email = $1
       RETURNING *;
     `;
@@ -1641,7 +1651,8 @@ app.put("/api/users/updateprofile", async (req, res) => {
     res.json({ message: "Profile updated", user: result.rows[0] });
   } catch (err) {
     await client.query("ROLLBACK");
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error while updating profile:", err.stack);
+    res.status(500).json({ error: "Internal server error while updating profile" });
   } finally {
     client.release();
   }
@@ -1665,5 +1676,5 @@ app.get("/", (req, res) => {
 
 // Start server with full URL
 app.listen(process.env.PORT, () => {
-  console.log(`Server is running on http://localhost:${process.env.PORT}`);
+  console.log(`Server is running on port:${process.env.PORT}`);
 });

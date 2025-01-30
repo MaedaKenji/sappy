@@ -161,6 +161,8 @@ class _ProfilePageState extends State<ProfilePage> {
           title: 'Logout',
           content: 'Are you sure you want to logout?',
           onConfirm: () {
+            final userRole = Provider.of<UserRole>(context, listen: false);
+            userRole.logout();
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
