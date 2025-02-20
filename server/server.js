@@ -27,28 +27,49 @@ function isSameDay(date1, date2) {
   );
 }
 
-// PostgreSQL connection setup
-const pool = new Pool({
-  host: process.env.PGHOST,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
-  // port: process.env.PGPORT,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
+let pool;
 
-const poolTernaknesiaRelational = new Pool({
-  user: process.env.PGUSER, // Ganti dengan username PostgreSQL Anda
-  host: process.env.PGHOST, // Ganti dengan host PostgreSQL Anda
-  database: process.env.PGDATABASE, // Ganti dengan nama database kedua Anda
-  password: process.env.PGPASSWORD, // Ganti dengan password PostgreSQL Anda
-  // port: process.env.PGPORT,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
+// PostgreSQL connection setup
+if(process.env.NODE_ENV === 'production') {
+  pool = new Pool({
+    host: process.env.PGHOST,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    database: process.env.PGDATABASE,
+    // port: process.env.PGPORT,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  poolTernaknesiaRelational = new Pool({
+    user: process.env.PGUSER, // Ganti dengan username PostgreSQL Anda
+    host: process.env.PGHOST, // Ganti dengan host PostgreSQL Anda
+    database: process.env.PGDATABASE, // Ganti dengan nama database kedua Anda
+    password: process.env.PGPASSWORD, // Ganti dengan password PostgreSQL Anda
+    // port: process.env.PGPORT,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
+}
+else {
+ pool = new Pool({
+    host: process.env.PGHOST,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    database: process.env.PGDATABASE,
+    port: process.env.PGPORT,
+  });
+
+ poolTernaknesiaRelational = new Pool({
+    user: process.env.PGUSER, // Ganti dengan username PostgreSQL Anda
+    host: process.env.PGHOST, // Ganti dengan host PostgreSQL Anda
+    database: process.env.PGDATABASE, // Ganti dengan nama database kedua Anda
+    password: process.env.PGPASSWORD, // Ganti dengan password PostgreSQL Anda
+    port: process.env.PGPORT,
+  });
+}
 
 // Test the connection
 // poolTernaknesiaRelational.connect();
@@ -348,38 +369,7 @@ GROUP BY value;
 });
 
 
-app.post("/api/cows/update-nfc", async (req, res) => {
-  const { cow_id, nfc_id } = req.body;
 
-  // Validasi input
-  if (!cow_id || !nfc_id) {
-    return res.status(400).json({ error: "cow_id and nfc_id are required" });
-  }
-
-  try {
-    // Query update nfc_id
-    const query = `
-      UPDATE cows
-      SET nfc_id = $1
-      WHERE cow_id = $2
-      RETURNING *;
-    `;
-    const values = [nfc_id, cow_id];
-
-    const result = await poolTernaknesiaRelational.query(query, values);
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Cow not found" });
-    }
-
-    res.status(200).json({
-      message: "NFC ID updated successfully",
-      cow: result.rows[0],
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 app.post("/api/cows/kondisi/:id", async (req, res) => {
   const cowId = req.params.id; // Mendapatkan cow_id dari URL parameter
@@ -728,17 +718,33 @@ app.get("/api/cows/predict-milk/:id", async (req, res) => {
     }
 
     // Format data untuk dikirim ke Flask
-    const last_3_days = result.rows.map((row) => row.produksi);
+    var last_3_days = result.rows.map((row) => row.value);
+    var flaskResponse;
+    console.log("Last 3 days:", last_3_days);
 
-    const flaskResponse = await axios.post(
-      "http://localhost:5000/predict_daily_milk",
+    try {
+      // Kirim data ke Flask menggunakan axios
+       flaskResponse = await axios.put(
+      "http://127.0.0.1:5000/susu-harian",
       {
         last_3_days: last_3_days,
+      },
+      {
+        headers: {
+        "Content-Type": "application/json", // Set content type to application/json
+        },
       }
-    );
+      );
+
+      // Log the Flask response
+      console.log("Flask response: ", flaskResponse.data);
+    } catch (error) {
+      // Handle errors (e.g., network issues, Flask server errors)
+      console.error("Error sending data to Flask:", error.message);
+    }
 
     // Gabungkan data asli dengan hasil prediksi
-    const predicted_daily_milk = flaskResponse.data.predicted_daily_milk;
+    const predicted_daily_milk = flaskResponse.data.result;
 
     res.json({
       data: result.rows,
@@ -1395,7 +1401,8 @@ app.get("/api/predict/monthly", async (req, res) => {
   GROUP BY
     DATE_TRUNC('month', tanggal)
   ORDER BY
-    bulan ASC;
+    bulan DESC
+  LIMIT 8;
   `;
 
   try {
@@ -1404,20 +1411,23 @@ app.get("/api/predict/monthly", async (req, res) => {
     const data = result.rows.map((row) => ({
       bulan: row.bulan.toISOString().slice(0, 7),
       totalProduksi: Number(row.total_produksi),
-    }));
+    })).reverse();
+    console.log(data);
 
     const last3Months = data.slice(-3).map((row) => row.totalProduksi);
 
     let prediction = 0;
 
-    if (last3Months.length === 3) {
+    try {
       const flaskResponse = await axios.post(
-        "http://127.0.0.1:5000/predict_monthly_milk",
-        {
-          last_3_months: last3Months,
-        }
+      "http://127.0.0.1:5000/predict_monthly_milk",
+      {
+        last_3_months: last3Months,
+      }
       );
       prediction = flaskResponse.data.next_month_prediction;
+    } catch (error) {
+      console.error("Error predicting monthly milk production:", error.message);
     }
 
     res.json({
@@ -1502,6 +1512,97 @@ LEFT JOIN LatestHealth lh ON c.cow_id = lh.cow_id AND lh.rn = 1
     res.json(response);
   } catch (error) {
     res.status(500).json({ error: "Error while fetching NFC data" });
+  }
+});
+// NFC + JWT
+app.post("/api/data/nfc/jwt", async (req, res) => {
+  const nfc_id = req.body.nfc_id;
+  try {
+    const query = `
+WITH LatestWeight AS(
+    SELECT
+        bb.cow_id,
+    bb.berat,
+    bb.tanggal,
+    ROW_NUMBER() OVER(PARTITION BY bb.cow_id ORDER BY bb.tanggal DESC) AS rn
+    FROM public.berat_badan bb
+  ),
+    LatestHealth AS(
+      SELECT
+        k.cow_id,
+      k.status_kesehatan,
+      k.tanggal,
+      ROW_NUMBER() OVER(PARTITION BY k.cow_id ORDER BY k.tanggal DESC) AS rn
+    FROM public.kesehatan k
+    )
+  SELECT
+  c.cow_id AS id,
+    lw.berat AS weight,
+      c.umur AS age,
+        c.gender,
+        lh.status_kesehatan AS healthStatus,
+          c.nfc_id
+  FROM
+  public.cows c
+LEFT JOIN LatestWeight lw ON c.cow_id = lw.cow_id AND lw.rn = 1
+LEFT JOIN LatestHealth lh ON c.cow_id = lh.cow_id AND lh.rn = 1
+  WHERE
+  c.nfc_id LIKE $1;
+  `;
+
+    const result = await poolTernaknesiaRelational.query(query, [
+      `% ${nfc_id}% `,
+    ]);
+
+    // Map hasil query ke format yang diminta
+    const response = result.rows.map((row) => ({
+      id: row.id,
+      weight: row.weight || null,
+      age: row.age || null,
+      gender: row.gender || null,
+      healthStatus: row.healthstatus || null,
+      isProductive: false,
+      isConnectedToNFCTag: row.nfc_id !== null, // Mengatur true jika nfc_id tidak null
+      nfc_id: row.nfc_id || nfc_id, // Menggunakan nilai dari database jika tersedia, jika tidak, gunakan input
+    }));
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: "Error while fetching NFC data" });
+  }
+});
+  
+
+app.post("/api/cows/update-nfc", async (req, res) => {
+  const { cow_id, nfc_id } = req.body;
+
+  // Validasi input
+  if (!cow_id || !nfc_id) {
+    return res.status(400).json({ error: "cow_id and nfc_id are required" });
+  }
+
+  try {
+    // Query update nfc_id
+    const query = `
+      UPDATE cows
+      SET nfc_id = $1
+      WHERE cow_id = $2
+      RETURNING *;
+    `;
+    const values = [nfc_id, cow_id];
+
+    const result = await poolTernaknesiaRelational.query(query, values);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Cow not found" });
+    }
+
+    res.status(200).json({
+      message: "NFC ID updated successfully",
+      cow: result.rows[0],
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

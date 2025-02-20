@@ -87,7 +87,7 @@ class _DataPageState extends State<DataPage> {
 
     if (response.statusCode == 200) {
       List<dynamic> data = json.decode(response.body);
-      debugPrint("data untuk datapage: ${data}");
+      // debugPrint("data untuk datapage: $data");
       // Convert JSON to List<Cattle>
       final cattleList = data.map((item) => Cattle.fromJson(item)).toList();
 

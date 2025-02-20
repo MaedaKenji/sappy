@@ -8,7 +8,7 @@ class CustomLineChart extends StatefulWidget {
   String? otherInfo;
   double? valueInfo;
   final Map<String, List<FlSpot>> datas;
-  double? predictionPointWidget;
+  double? predictionPointWidget; //Ini gak kepake sebetulnya, tapi ya biar aja belum refactor
   final Function(FlSpot?)? onLastPointUpdated;
 
   CustomLineChart(
@@ -153,7 +153,7 @@ class _CustomLineChartState extends State<CustomLineChart> {
                 ? SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: SizedBox(
-                      width: chartWidth,
+                      width: chartWidth * 0.85,
                       child: LineChart(
                         LineChartData(
                           gridData: const FlGridData(show: true),

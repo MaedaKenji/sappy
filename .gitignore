@@ -8,3 +8,8 @@ sappy/build
 sappy/.dart_tool
 sappy/.flutter-plugins
 sappy/.flutter-plugins-dependencies
+.vercel
+server/.env.development
+server/.env.production
+
+sappy/todo.md

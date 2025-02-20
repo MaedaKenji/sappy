@@ -34,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = false;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
-     _initializeData();
+    _initializeData();
   }
 
   Future<void> _initializeData() async {
@@ -86,6 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
         'totalProduksi': item['totalProduksi'].toDouble(),
       };
     }).toList();
+    setState(() {
+      susuBulanan = susuBulanan;
+    });
   }
 
   final List<Map<String, dynamic>> sickIndicated = [
@@ -328,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
         {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
         {'title': 'Error', 'subtitle': 'Tidak ada data dari server'},
       ];
-    } 
+    }
   }
 
   Future<Map<String, Map<String, List<FlSpot>>>> _fetchChartData() async {
@@ -347,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final responseTimeInSeconds = stopwatch.elapsedMilliseconds / 1000;
 
       // Tampilkan waktu respons
-      debugPrint('Response Time: $responseTimeInSeconds detik');
+      // debugPrint('Response Time: $responseTimeInSeconds detik');
 
       if (response.statusCode == 200) {
         final rawData =
@@ -377,7 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         return chartData;
       } else {
-        debugPrint('Failed to fetch chart data. Status code: ${response.statusCode}');
+        debugPrint(
+            'Failed to fetch chart data. Status code: ${response.statusCode}');
         return {
           'Error': {
             'Error': [const FlSpot(0, 0)]
@@ -385,8 +389,9 @@ class _HomeScreenState extends State<HomeScreen> {
         };
       }
     } catch (e) {
-        debugPrint(
-          'Error fetching chart data: $e',);
+      debugPrint(
+        'Error fetching chart data: $e',
+      );
 
       return {
         'Error': {
@@ -426,11 +431,11 @@ class _HomeScreenState extends State<HomeScreen> {
           sentratWeight = 0;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal memuat data kombinasi pakan terbaik'),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //     content: Text('Gagal memuat data kombinasi pakan terbaik'),
+        //   ),
+        // );
       }
     } catch (e) {}
   }
@@ -463,12 +468,12 @@ class _HomeScreenState extends State<HomeScreen> {
         predictedNextMonth = newPrediction;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal memuat data'),
-        ),
-      );
-    } 
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(
+      //     content: Text('Gagal memuat data'),
+      //   ),
+      // );
+    }
   }
 
   Future<void> fetchSickIndicatedDinamis() async {
@@ -477,7 +482,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response =
           await http.get(Uri.parse(apiUrl)).timeout(const Duration(seconds: 5));
-          
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -510,7 +514,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response =
           await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
-      
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonResponse = jsonDecode(response.body);
@@ -770,22 +773,21 @@ class _HomeScreenState extends State<HomeScreen> {
                               title: 'Berat Pangan Hijauan',
                               datas: greenFodderData,
                               otherInfo: 'Pakan Hijauan Terbaik saat ini :',
-                              valueInfo: hijauanWeight,
-                              predictionPointWidget: 0.0,
+                              valueInfo: 6.2,
+                              predictionPointWidget: 6.2,
                             ),
                             CustomLineChart(
                               title: 'Berat Pangan Sentrat',
                               datas: concentratedFodderData,
                               otherInfo: 'Pakan Sentrat Terbaik saat ini :',
-                              valueInfo: sentratWeight,
-                              predictionPointWidget: 0.0,
+                              valueInfo: 4.8,
+                              predictionPointWidget: 4.8,
                             ),
                             CustomBarChart(
                               title: 'Produksi Susu Per Bulan',
                               barGroupData: milkProductionPerMonthDynamics(),
                               predictedNextMonth: predictedNextMonth,
                               data: susuBulanan,
-
                             ),
                           ],
                         ),
@@ -818,52 +820,52 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 16),
                             if (sickIndicatedDinamis.isNotEmpty)
                               const Text(
-                              'Sapi Terindikasi Sakit :',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF8F3505),
-                              ),
+                                'Sapi Terindikasi Sakit :',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF8F3505),
+                                ),
                               ),
                             if (sickIndicatedDinamis.isEmpty)
                               Container(
-                              padding: const EdgeInsets.all(16),
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.green[100],
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(
-                                color: Colors.green,
-                                width: 1,
+                                padding: const EdgeInsets.all(16),
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[100],
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(
+                                    color: Colors.green,
+                                    width: 1,
+                                  ),
                                 ),
-                              ),
-                              child: const Text(
-                                'Semua sapi sehat',
-                                style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.green,
+                                child: const Text(
+                                  'Semua sapi sehat',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green,
+                                  ),
                                 ),
-                              ),
                               ),
                             for (var cattle in sickIndicatedDinamis)
                               _buildCattleCard(
-                              context,
-                              id: cattle['id'],
-                              gender: cattle['gender'],
-                              info: cattle['info'],
-                              checked: cattle['checked'] ?? false,
-                              onPressed: () {
-                                return DataSapiPage(
+                                context,
                                 id: cattle['id'],
                                 gender: cattle['gender'],
-                                age: cattle['age'],
-                                healthStatus: 'SAKIT',
-                                isProductive: true,
-                                isConnectedToNFCTag:
-                                  cattle['isConnectedToNFCTag'],
-                                );
-                              },
+                                info: cattle['info'],
+                                checked: cattle['checked'] ?? false,
+                                onPressed: () {
+                                  return DataSapiPage(
+                                    id: cattle['id'],
+                                    gender: cattle['gender'],
+                                    age: cattle['age'],
+                                    healthStatus: 'SAKIT',
+                                    isProductive: true,
+                                    isConnectedToNFCTag:
+                                        cattle['isConnectedToNFCTag'],
+                                  );
+                                },
                               ),
                           ],
                         ),

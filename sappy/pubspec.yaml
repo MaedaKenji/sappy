@@ -84,6 +84,7 @@ flutter:
     - assets/images/farmer.png
     - assets/images/admin.png
     - assets/images/doctor.png
+    # - assets/models/lstm_model3SeqHarian.tflite
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

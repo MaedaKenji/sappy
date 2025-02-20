@@ -16,10 +16,10 @@ class CustomBarChart extends StatelessWidget {
     required this.data,
   }) {
     // Debug print in the constructor
-    debugPrint('CustomBarChart Constructor:');
-    debugPrint('Title: $title');
-    debugPrint('Predicted Next Month: $predictedNextMonth');
-    debugPrint('Data: $data');
+    // debugPrint('CustomBarChart Constructor:');
+    // debugPrint('Title: $title');
+    // debugPrint('Predicted Next Month: $predictedNextMonth');
+    // debugPrint('Data: $data');
   }
    
  

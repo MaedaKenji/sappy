@@ -10,7 +10,8 @@
   "scripts": {
     "server": "nodemon server/server.js",
     "predict": "python server/appflask.py",
-    "flutter": "flutter run"
+    "flutter": "flutter run",
+    "b n i": "node scripts/flutter-build.js"
   },
   "repository": {
     "type": "git",

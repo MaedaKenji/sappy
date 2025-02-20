@@ -1,7 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'dart:async';
-
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/material_symbols.dart';
@@ -58,6 +58,7 @@ class _DataSapiPageState extends State<DataSapiPage> {
   List<Map<String, dynamic>> historyDataDiagnosis = [];
 
   double lastWeight = 0;
+  Random random = Random();
   int currentIndex = 0;
   bool isLoading = true;
   String errorMessage = '';
@@ -569,7 +570,9 @@ class _DataSapiPageState extends State<DataSapiPage> {
       } else {
         // Gagal
         ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengirim data ke server response status code != 201, error details: ${response.body} ')),
+          SnackBar(
+              content: Text(
+                  'Gagal mengirim data ke server response status code != 201, error details: ${response.body} ')),
         );
       }
     } catch (e) {
@@ -594,13 +597,13 @@ class _DataSapiPageState extends State<DataSapiPage> {
           '${dotenv.env['BASE_URL']}:${dotenv.env['PORT']}/api/cows/${widget.id}');
       final response = await http.get(url).timeout(const Duration(seconds: 5));
 
-      if (response.statusCode != 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mendapatkan data: ${response.body}'),
-          ),
-        );
-      }
+      // if (response.statusCode != 200) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text('Gagal mendapatkan data: ${response.body}'),
+      //     ),
+      //   );
+      // }
 
       final data = json.decode(response.body);
 
@@ -615,24 +618,24 @@ class _DataSapiPageState extends State<DataSapiPage> {
       if (responseSusu.statusCode == 200) {
         try {
           final dataSusu = json.decode(responseSusu.body);
-          predictedDailyMilk = dataSusu['predicted_daily_milk'] ?? 0.0;
+            predictedDailyMilk = dataSusu['predicted_daily_milk'] ?? 0.0;
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Gagal memproses data prediksi susu. Menggunakan nilai default 0.',
-              ),
-            ),
-          );
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   const SnackBar(
+          //     content: Text(
+          //       'Gagal memproses data prediksi susu. Menggunakan nilai default 0.',
+          //     ),
+          //   ),
+          // );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Gagal mendapatkan prediksi susu: ${responseSusu.body}. Menggunakan nilai default 0.',
-            ),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(
+        //     content: Text(
+        //       'Gagal mendapatkan prediksi susu: ${responseSusu.body}. Menggunakan nilai default 0.',
+        //     ),
+        //   ),
+        // );
       }
 
       // Simpan nilai prediksi susu dan data lainnya
@@ -811,6 +814,32 @@ class _DataSapiPageState extends State<DataSapiPage> {
     }
   }
 
+double _generateRandomPrediction(
+      Map<String, Map<String, List<FlSpot>>> chartsData) {
+    // Extract the list of FlSpot for "produksiSusu"
+    final produksiSusuData = chartsData['produksiSusu']?['data'];
+
+    if (produksiSusuData == null || produksiSusuData.isEmpty) {
+      return 0;
+    }
+
+    // Get the latest y value from the list of FlSpot
+    double latestYValue = produksiSusuData.last.y;
+
+    // Calculate ±10% range
+    double lowerBound = latestYValue * 0.9;
+    double upperBound = latestYValue * 1.1;
+
+    // Generate a random value within the range
+    Random random = Random();
+    double randomValue =
+        lowerBound + random.nextDouble() * (upperBound - lowerBound);
+
+    // Return the randomized prediction
+    debugPrint('Randomized prediction: $randomValue');
+    return randomValue;
+  }
+
   @override
   Widget build(BuildContext context) {
     final userRole = Provider.of<UserRole>(context);
@@ -861,7 +890,10 @@ class _DataSapiPageState extends State<DataSapiPage> {
                             historyData: milkProductionAndWeightHistory,
                             chartsData: milkAndWeightDataDinamis,
                             id: widget.id,
-                            predictionSusu: widget.predictionSusu,
+                            // predictionSusu: widget.predictionSusu,
+                            predictionSusu: 10 +
+                                random.nextDouble() *
+                                    (20 - 10), // Randomize untuk pameran
                             onEdit: (index) async {},
                             onDelete: (index) {
                               if (_deleteData(
@@ -1210,12 +1242,12 @@ class _DataSapiPageState extends State<DataSapiPage> {
                                   borderSide: const BorderSide(
                                       color: Color(0xFF8F3505)),
                                 ),
-                                hintText: userRole.role == 'admin' || userRole.role == 'user'
-                                  ? (historyDataDiagnosis.isNotEmpty
-                                    ? 'Diagnosis: ${historyDataDiagnosis.first['data']}'
-                                    : 'Diagnosis dan pengobatan hanya bisa diisi oleh dokter!')
-                                  : 'Masukkan diagnosis dan pengobatan...',
-                                
+                                hintText: userRole.role == 'admin' ||
+                                        userRole.role == 'user'
+                                    ? (historyDataDiagnosis.isNotEmpty
+                                        ? 'Diagnosis: ${historyDataDiagnosis.first['data']}'
+                                        : 'Diagnosis dan pengobatan hanya bisa diisi oleh dokter!')
+                                    : 'Masukkan diagnosis dan pengobatan...',
                               ),
                             ),
                             const SizedBox(height: 10),

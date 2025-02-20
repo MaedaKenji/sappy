@@ -27,9 +27,17 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController(text: 'rama@gmail.com');
+  final TextEditingController _passwordController = TextEditingController(text: '12345678');
   bool isLoading = false;
+
+  @override
+  void dispose() {
+    // Dispose the controllers when the widget is disposed to avoid memory leaks
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     // Trim input values to avoid whitespace issues
@@ -112,12 +120,13 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on TimeoutException {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Request timed out. Please try again.')),
+        const SnackBar(content: Text("Request timed out. Connection to server can't be reached.")),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred: $e')),
+        SnackBar(content: Text('An error occurred. $e')),
       );
+      debugPrint(e.toString()); // Print error to console
     } finally {
       setState(() {
         isLoading = false; // Stop loading
