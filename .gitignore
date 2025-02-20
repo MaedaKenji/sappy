@@ -12,7 +12,7 @@ sappy/.flutter-plugins-dependencies
 server/.env.development
 server/.env.production
 sappy/todo.md
-*.env
+**/.env
 *.env copy
 *.env.local
 server/.env copy
