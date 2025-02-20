@@ -11,5 +11,8 @@ sappy/.flutter-plugins-dependencies
 .vercel
 server/.env.development
 server/.env.production
-
 sappy/todo.md
+*.env
+*.env copy
+*.env.local
+server/.env copy
